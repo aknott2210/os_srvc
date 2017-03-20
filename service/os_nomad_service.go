@@ -33,20 +33,29 @@ func (p *program) Start(s service.Service) error {
 
 func (p *program) run() {
        if(jobRunning()) {
-           host := host()
+           host := host(hostname())
            if(host.Drain) {
                client.Drain("http://" + nomad, host.ID, false)
-               fmt.Println("Node has been drained")
-           } else {
-               fmt.Println("Node has NOT been drained")
-           }
+           } 
        } else {
            //TODO submit job
        }
 }
 
+func hostname() string {
+    hostname, err := os.Hostname() 
+    if err != nil {
+        log.Fatal(err)
+    }
+    return hostname
+}
+
 func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
+	host := host(hostname())
+	if(host.Drain == false) {
+	    client.Drain("http://" + nomad, host.ID, true)
+	}
 	return nil
 }
 
@@ -60,12 +69,8 @@ func jobRunning() bool {
        return false
 }
 
-func host() *client.Host {
+func host(hostname string) *client.Host {
    hosts := client.PopulateHosts("http://" + nomad)
-   hostname, err := os.Hostname() 
-   if err != nil {
-            log.Fatal(err)
-   }
    for _, host := range hosts {
            if(hostname == host.Name) {
            	return &host
