@@ -7,9 +7,9 @@ package main
 
 import (
 	"log"
-	"fmt"
 	"os"
 	"flag"
+	"fmt"
 	"github.com/kardianos/service"
 	"github.com/pgombola/gomad/client"
 )
@@ -27,21 +27,19 @@ type program struct{}
 
 func (p *program) Start(s service.Service) error {
 	// Start should not block. Do the actual work async.
-	fmt.Println("Starting")
 	go p.run()
 	return nil
 }
 
 func (p *program) run() {
-       fmt.Println("Running")
        if(jobRunning()) {
-           fmt.Println("Job is running")
-           if(drained()) {
+           host := host()
+           if(host.Drain) {
+               client.Drain("http://" + nomad, host.ID, false)
                fmt.Println("Node has been drained")
            } else {
                fmt.Println("Node has NOT been drained")
            }
-           //TODO see if status is drained
        } else {
            //TODO submit job
        }
@@ -49,7 +47,6 @@ func (p *program) run() {
 
 func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
-	fmt.Println("Stopping")
 	return nil
 }
 
@@ -63,18 +60,18 @@ func jobRunning() bool {
        return false
 }
 
-func drained() bool {
-    hosts := client.PopulateHosts("http://" + nomad)
-    hostname, err := os.Hostname() 
-    if err != nil {
+func host() *client.Host {
+   hosts := client.PopulateHosts("http://" + nomad)
+   hostname, err := os.Hostname() 
+   if err != nil {
             log.Fatal(err)
-    }
-    for _, host := range hosts {
-           if(hostname == host.Name && host.Drain) {
-           	return true
+   }
+   for _, host := range hosts {
+           if(hostname == host.Name) {
+           	return &host
            }
-    }
-    return false
+   }
+   return &client.Host{}
 }
 
 func main() {
