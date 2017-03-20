@@ -42,14 +42,6 @@ func (p *program) run() {
        }
 }
 
-func hostname() string {
-    hostname, err := os.Hostname() 
-    if err != nil {
-        log.Fatal(err)
-    }
-    return hostname
-}
-
 func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
 	host := host(hostname())
@@ -57,6 +49,14 @@ func (p *program) Stop(s service.Service) error {
 	    client.Drain("http://" + nomad, host.ID, true)
 	}
 	return nil
+}
+
+func hostname() string {
+    hostname, err := os.Hostname() 
+    if err != nil {
+        log.Fatal(err)
+    }
+    return hostname
 }
 
 func jobRunning() bool {
