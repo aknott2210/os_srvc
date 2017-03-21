@@ -15,7 +15,8 @@ import (
 )
 
 var logger service.Logger
-var nomad string = "10.10.20.31:4646"
+var address string = "10.10.20.31"
+var port int = 4646
 var jobName string = "clarify"
 
 //func init() {
@@ -38,7 +39,7 @@ func (p *program) run() {
            host := host("server-1")
            if(host.Drain) {
                logInfo("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
-               client.Drain("http://" + nomad, host.ID, false)
+               client.Drain(&client.NomadServer{address, port}, host.ID, false)
                logInfo("Sent request for node drain enable=false")
            } 
        } else {
@@ -53,7 +54,7 @@ func (p *program) Stop(s service.Service) error {
 	host := host("server-1")
 	if(host.Drain == false) {
 	    logInfo("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
-	    client.Drain("http://" + nomad, host.ID, true)
+	    client.Drain(&client.NomadServer{address, port}, host.ID, true)
 	    logInfo("Sent request for node drain enable=true")
 	} else {
 	    logWarning("Unexpectedly detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
@@ -85,7 +86,7 @@ func hostname() string {
 }
 
 func jobRunning() bool {
-       jobs := client.PopulateJobs("http://" + nomad)
+       jobs := client.Jobs(&client.NomadServer{address, port})
        for _, job := range jobs {
        		if(jobName == job.Name) {
        		    return true
@@ -95,7 +96,7 @@ func jobRunning() bool {
 }
 
 func host(hostname string) *client.Host {
-   hosts := client.PopulateHosts("http://" + nomad)
+   hosts := client.Hosts(&client.NomadServer{address, port})
    for _, host := range hosts {
            if(hostname == host.Name) {
            	return &host
@@ -120,9 +121,9 @@ func main() {
 	
 	
 	svcConfig := &service.Config{
-		Name:        "GoServiceExampleSimple17",
-		DisplayName: "Go Service Example17",
-		Description: "This is an example Go service17.",
+		Name:        "GoServiceExampleSimple18",
+		DisplayName: "Go Service Example18",
+		Description: "This is an example Go service18.",
 	}
 
 	prg := &program{}
