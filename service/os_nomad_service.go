@@ -15,40 +15,65 @@ import (
 )
 
 var logger service.Logger
-var nomad string
-var jobName string
+var nomad string = "10.10.20.31:4646"
+var jobName string = "clarify"
 
-func init() {
-	flag.StringVar(&nomad, "nomad", "", "Host address and port of nomad server")
-	flag.StringVar(&jobName, "job", "", "Job Name")
-}
+//func init() {
+//	flag.StringVar(&nomad, "nomad", "", "Host address and port of nomad server")
+//	flag.StringVar(&jobName, "job", "", "Job Name")
+//}
 
 type program struct{}
 
 func (p *program) Start(s service.Service) error {
 	// Start should not block. Do the actual work async.
+	logInfo("Starting service...")
 	go p.run()
 	return nil
 }
 
 func (p *program) run() {
        if(jobRunning()) {
-           host := host(hostname())
+           logInfo("Detected job as running...")
+           host := host("server-1")
            if(host.Drain) {
+               logInfo("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
                client.Drain("http://" + nomad, host.ID, false)
+               logInfo("Sent request for node drain enable=false")
            } 
        } else {
+           logInfo("Detected no running jobs, submitting " + jobName)
            //TODO submit job
        }
 }
 
 func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
-	host := host(hostname())
+	logInfo("Stopping service...")
+	host := host("server-1")
 	if(host.Drain == false) {
+	    logInfo("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
 	    client.Drain("http://" + nomad, host.ID, true)
+	    logInfo("Sent request for node drain enable=true")
+	} else {
+	    logWarning("Unexpectedly detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
 	}
 	return nil
+}
+
+func logInfo(msg string) {
+    fmt.Println(msg)
+    logger.Info(msg)
+}
+
+func logWarning(msg string) {
+    fmt.Println(msg)
+    logger.Warning(msg)
+}
+
+func logError(msg string) {
+    fmt.Println(msg)
+    logger.Error(msg)
 }
 
 func hostname() string {
@@ -76,26 +101,28 @@ func host(hostname string) *client.Host {
            	return &host
            }
    }
+   logError("Couldn't detect host, failing fast")
+   os.Exit(1)
    return &client.Host{}
 }
 
 func main() {
         svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
-	if nomad == "" {
-			fmt.Println("nomad flag must be set.")
-			os.Exit(-1)
-	}
-	if jobName == "" {
-	                fmt.Println("job flag must be set.")
-			os.Exit(-1)
-	}
+	//if nomad == "" {
+	//		fmt.Println("nomad flag must be set.")
+	//		os.Exit(-1)
+	//}
+	//if jobName == "" {
+	//                fmt.Println("job flag must be set.")
+	//		os.Exit(-1)
+	//}
 	
 	
 	svcConfig := &service.Config{
-		Name:        "GoServiceExampleSimple",
-		DisplayName: "Go Service Example",
-		Description: "This is an example Go service.",
+		Name:        "GoServiceExampleSimple17",
+		DisplayName: "Go Service Example17",
+		Description: "This is an example Go service17.",
 	}
 
 	prg := &program{}
