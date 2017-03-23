@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"flag"
+	"path"
 	"github.com/kardianos/service"
 	"github.com/pgombola/gomad/client"
 )
@@ -33,12 +34,12 @@ func (p *program) run() {
            host := host("server-1")
            if(host.Drain) {
                logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
-               client.Drain(&client.NomadServer{address, port}, host.ID, false)
+               logger.Info(client.Drain(&client.NomadServer{address, port}, host.ID, false))
                logger.Info("Sent request for node drain enable=false")
            } 
        } else {
            logger.Info("Detected no running jobs, submitting " + jobName)
-           client.SubmitJob(&client.NomadServer{address, port}, "../launch_clarify.json")
+           logger.Info(client.SubmitJob(&client.NomadServer{address, port}, exeDir() + "/../launch_clarify.json"))
        }
 }
 
@@ -46,7 +47,7 @@ func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
 	logger.Info("Stopping service...")
 	host := host("server-1")
-	if(host.Drain == false) {
+	if(!host.Drain) {
 	    logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
 	    client.Drain(&client.NomadServer{address, port}, host.ID, true)
 	    logger.Info("Sent request for node drain enable=true")
@@ -84,6 +85,14 @@ func host(hostname string) *client.Host {
    logger.Error("Couldn't detect host, failing fast")
    os.Exit(1)
    return &client.Host{}
+}
+
+func exeDir() string {
+    ex, err := os.Executable()
+    if err != nil {
+        panic(err)
+    }
+    return path.Dir(ex)
 }
 
 func main() {
