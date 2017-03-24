@@ -11,6 +11,7 @@ import (
 	"path"
 	"github.com/kardianos/service"
 	"github.com/pgombola/gomad/client"
+	"github.com/aknott2210/os_service/arguments"
 	"strconv"
 )
 
@@ -18,7 +19,6 @@ var logger service.Logger
 var address string
 var port int
 var job string
-const serviceFlag string = "-service"
 
 type program struct{}
 
@@ -29,7 +29,7 @@ func init() {
 }
 
 func init() {
-        if(!serviceCall()) {
+        if(!arguments.ServiceCall()) {
                 address = os.Args[1]
                 var err error
 	        port, err = strconv.Atoi(os.Args[2])
@@ -38,15 +38,6 @@ func init() {
 	        }
                 job = os.Args[3]
         }
-}
-
-func serviceCall() bool {
-    for _, arg := range os.Args {
-        if arg == serviceFlag {
-                return true
-        }
-    }
-    return false
 }
 
 func (p *program) Start(s service.Service) error {

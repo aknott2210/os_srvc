@@ -8,17 +8,27 @@ import (
 	"log"
 	"flag"
 	"github.com/kardianos/service"
+	"github.com/aknott2210/os_service/arguments"
 	"os"
-	//"os/exec"
+	"os/exec"
 )
 
 var logger service.Logger
-var consulPath string
+var consul string
+var config string
 
 type program struct{}
 
 func init() {
-	flag.StringVar(&consulPath, "consulPath", "", "The path to Consul.")
+	flag.StringVar(&consul, "consul", "", "The path to Consul.")
+	flag.StringVar(&config, "config", "", "The path to Consul configuration.")
+}
+
+func init() {
+        if !arguments.ServiceCall() {
+           consul = os.Args[1]     
+           config = os.Args[2]
+        }
 }
 
 func (p *program) Start(s service.Service) error {
@@ -29,8 +39,11 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
-       logger.Error(os.Args[1])
-       //cmd := exec.Command("sleep", "5")
+       cmd := exec.Command(consul, "agent", "-config-dir", config)
+       err := cmd.Start()
+       if err != nil {
+            logger.Error(err)
+       }
 }
 
 func (p *program) Stop(s service.Service) error {
@@ -41,10 +54,10 @@ func main() {
         svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
 	svcConfig := &service.Config{
-		Name:        "Consul Service5",
-		DisplayName: "Consul Service5",
+		Name:        "Consul8",
+		DisplayName: "Consul8",
 		Description: "This service starts up Consul",
-		Arguments: []string{"TEST ARG"},
+		Arguments: []string{consul, config},
 	}
 
 	prg := &program{}
@@ -60,7 +73,7 @@ func main() {
 	        err := service.Control(s, *svcFlag)
 		if err != nil {
 			log.Printf("Valid actions: %q\n", service.ControlAction)
-			log.Fatal(err)
+			log.Fatal(err) 
 		}
 		return
 	}
