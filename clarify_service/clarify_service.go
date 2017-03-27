@@ -139,8 +139,7 @@ func host(hostname string) *client.Host {
            	return &host
            }
    }
-   logger.Error("Couldn't detect host, failing fast")
-   os.Exit(1)
+   panic("Couldn't detect host")
    return &client.Host{}
 }
 
