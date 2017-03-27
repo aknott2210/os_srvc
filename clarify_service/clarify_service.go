@@ -20,6 +20,21 @@ var address string
 var port int
 var job string
 
+type http interface {
+   request() (string, error)
+}
+
+type Drain struct {
+    nomad* client.NomadServer
+    id string
+    enable bool
+}
+
+type SubmitJob struct {
+    nomad* client.NomadServer
+    launchFilePath string
+}
+
 type program struct{}
 
 func init() {
@@ -53,12 +68,12 @@ func (p *program) run() {
            host := host(hostname())
            if(host.Drain) {
                logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
-               logger.Info(client.Drain(&client.NomadServer{address, port}, host.ID, false))
+               drainRetryIndefinitely(&client.NomadServer{address, port}, host.ID, false)
                logger.Info("Sent request for node drain enable=false")
            } 
        } else {
            logger.Info("Detected no running jobs, submitting " + job)
-           logger.Info(client.SubmitJob(&client.NomadServer{address, port}, exeDir() + "/../../launch_clarify.json"))
+           submitJobRetryIndefinitely(&client.NomadServer{address, port}, exeDir() + "/../../launch_clarify.json")
        }
 }
 
@@ -92,6 +107,29 @@ func jobRunning() bool {
        		}
        }
        return false
+}
+
+func submitJobRetryIndefinitely(nomad *client.NomadServer, launchFilePath string) {
+    executeHTTPRequestRetryIndefinitely(SubmitJob{nomad, launchFilePath})
+}
+
+func drainRetryIndefinitely(nomad *client.NomadServer, id string, enable bool) {
+    executeHTTPRequestRetryIndefinitely(Drain{nomad, id, enable})
+}
+
+func (drain Drain) request() (string, error) {
+    status := client.Drain(drain.nomad, drain.id, drain.enable)
+    return status, nil
+}
+
+func (submitJob SubmitJob) request() (string, error) {
+    return client.SubmitJob(submitJob.nomad, submitJob.launchFilePath)
+}
+
+func executeHTTPRequestRetryIndefinitely(request http) {
+   for status, err := request.request(); status != "200" || err != nil; {
+        logger.Error("Error draining got http status: v% with error: %v", status, err)
+    } 
 }
 
 func host(hostname string) *client.Host {
