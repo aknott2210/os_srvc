@@ -70,7 +70,7 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
        if(jobRunning()) {
            logger.Info("Detected job as running...")
-           host := host(hostname())
+           host := hostRetryIndefinitely(hostname())
            if(host.Drain) {
                logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
                drainRetryIndefinitely(&client.NomadServer{address, port}, host.ID, false)
@@ -85,7 +85,7 @@ func (p *program) run() {
 func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
 	logger.Info("Stopping service...")
-	host := host(hostname())
+	host := hostRetryIndefinitely(hostname())
 	if(!host.Drain) {
 	    logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
 	    client.Drain(&client.NomadServer{address, port}, host.ID, true)
@@ -146,6 +146,19 @@ func executeHTTPRequestRetryIndefinitely(request http) {
     } 
 }
 
+func checkEmptyHost(host *client.Host) bool {
+    return host.ID == "" && host.Name == ""
+}
+
+func hostRetryIndefinitely(hostname string) *client.Host {
+    var foundHost *client.Host
+    for foundHost = host(hostname);checkEmptyHost(foundHost); {
+        logger.Error("Error trying to get host retrying.")
+        time.Sleep(3000 * time.Millisecond)
+    }
+    return foundHost
+}
+
 func host(hostname string) *client.Host {
    hosts := client.Hosts(&client.NomadServer{address, port})
    for _, host := range hosts {
@@ -153,7 +166,6 @@ func host(hostname string) *client.Host {
            	return &host
            }
    }
-   panic("Couldn't detect host")
    return &client.Host{}
 }
 
