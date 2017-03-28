@@ -13,26 +13,31 @@ import (
 	"github.com/pgombola/gomad/client"
 	"github.com/aknott2210/os_service/arguments"
 	"strconv"
+	"time"
 )
 
 var logger service.Logger
 var address string
 var port int
 var job string
+const http_200_ok_status string = "200 OK"
 
 type http interface {
    request() (string, error)
+   toVerb() string
 }
 
 type Drain struct {
     nomad* client.NomadServer
     id string
     enable bool
+    verb string
 }
 
 type SubmitJob struct {
     nomad* client.NomadServer
     launchFilePath string
+    verb string
 }
 
 type program struct{}
@@ -110,11 +115,11 @@ func jobRunning() bool {
 }
 
 func submitJobRetryIndefinitely(nomad *client.NomadServer, launchFilePath string) {
-    executeHTTPRequestRetryIndefinitely(SubmitJob{nomad, launchFilePath})
+    executeHTTPRequestRetryIndefinitely(SubmitJob{nomad, launchFilePath, "submitting job"})
 }
 
 func drainRetryIndefinitely(nomad *client.NomadServer, id string, enable bool) {
-    executeHTTPRequestRetryIndefinitely(Drain{nomad, id, enable})
+    executeHTTPRequestRetryIndefinitely(Drain{nomad, id, enable, "draining"})
 }
 
 func (drain Drain) request() (string, error) {
@@ -122,13 +127,22 @@ func (drain Drain) request() (string, error) {
     return status, nil
 }
 
+func (drain Drain) toVerb() string {
+    return drain.verb
+}
+
+func (submitJob SubmitJob) toVerb() string {
+    return submitJob.verb
+}
+
 func (submitJob SubmitJob) request() (string, error) {
     return client.SubmitJob(submitJob.nomad, submitJob.launchFilePath)
 }
 
 func executeHTTPRequestRetryIndefinitely(request http) {
-   for status, err := request.request(); status != "200" || err != nil; {
-        logger.Error("Error draining got http status: v% with error: %v", status, err)
+   for status, err := request.request(); status != http_200_ok_status || err != nil; {
+        logger.Error("Error " + request.toVerb() + " got http status: " + status + " with error: ", err)
+        time.Sleep(3000 * time.Millisecond)
     } 
 }
 
