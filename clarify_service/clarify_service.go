@@ -123,8 +123,8 @@ func drainRetryIndefinitely(nomad *client.NomadServer, id string, enable bool) {
 }
 
 func (drain Drain) request() (string, error) {
-    status := client.Drain(drain.nomad, drain.id, drain.enable)
-    return status, nil
+    status, err := client.Drain(drain.nomad, drain.id, drain.enable)
+    return status, err
 }
 
 func (drain Drain) toVerb() string {
