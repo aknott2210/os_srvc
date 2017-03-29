@@ -5,10 +5,10 @@
 package main
 
 import (
-	"log"
 	"flag"
-	"github.com/kardianos/service"
 	"github.com/aknott2210/os_service/arguments"
+	"github.com/kardianos/service"
+	"log"
 	"os"
 	"os/exec"
 )
@@ -29,12 +29,12 @@ func init() {
 }
 
 func init() {
-        if !arguments.ServiceCall() {
-           app = os.Args[1]     
-           config = os.Args[2]
-           configFlag = os.Args[3]
-           serviceName = os.Args[4]
-        }
+	if !arguments.ServiceCall() {
+		app = os.Args[1]
+		config = os.Args[2]
+		configFlag = os.Args[3]
+		serviceName = os.Args[4]
+	}
 }
 
 func (p *program) Start(s service.Service) error {
@@ -45,11 +45,11 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
-       cmd := exec.Command(app, "agent", configFlag, config)
-       err := cmd.Start()
-       if err != nil {
-            logger.Error(err)
-       }
+	cmd := exec.Command(app, "agent", configFlag, config)
+	err := cmd.Start()
+	if err != nil {
+		logger.Error(err)
+	}
 }
 
 func (p *program) Stop(s service.Service) error {
@@ -57,13 +57,13 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
-        svcFlag := flag.String("service", "", "Control the system service.")
+	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
 	svcConfig := &service.Config{
 		Name:        serviceName,
 		DisplayName: serviceName,
 		Description: "This service starts up " + serviceName,
-		Arguments: []string{app, config, configFlag, serviceName},
+		Arguments:   []string{app, config, configFlag, serviceName},
 	}
 
 	prg := &program{}
@@ -76,14 +76,14 @@ func main() {
 		log.Fatal(err)
 	}
 	if len(*svcFlag) != 0 {
-	        err := service.Control(s, *svcFlag)
+		err := service.Control(s, *svcFlag)
 		if err != nil {
 			log.Printf("Valid actions: %q\n", service.ControlAction)
-			log.Fatal(err) 
+			log.Fatal(err)
 		}
 		return
 	}
-	
+
 	err = s.Run()
 	if err != nil {
 		logger.Error(err)
