@@ -12,33 +12,14 @@ import (
 	"github.com/kardianos/service"
 	"github.com/pgombola/gomad/client"
 	"github.com/aknott2210/os_service/arguments"
+	"github.com/aknott2210/os_service/http"
 	"strconv"
-	"time"
 )
 
 var logger service.Logger
 var address string
 var port int
 var job string
-const http_200_ok_status string = "200 OK"
-
-type http interface {
-   request() (string, error)
-   toVerb() string
-}
-
-type Drain struct {
-    nomad* client.NomadServer
-    id string
-    enable bool
-    verb string
-}
-
-type SubmitJob struct {
-    nomad* client.NomadServer
-    launchFilePath string
-    verb string
-}
 
 type program struct{}
 
@@ -70,28 +51,27 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
        if(jobRunning()) {
            logger.Info("Detected job as running...")
-           host := hostRetryIndefinitely(hostname())
-           if(host.Drain) {
+           host := host(hostname())
+           if host.Drain {
                logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
-               drainRetryIndefinitely(&client.NomadServer{address, port}, host.ID, false)
+               http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, false, 5, 3)
                logger.Info("Sent request for node drain enable=false")
            } 
        } else {
            logger.Info("Detected no running jobs, submitting " + job)
-           submitJobRetryIndefinitely(&client.NomadServer{address, port}, exeDir() + "/../../launch_clarify.json")
+           http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, exeDir() + "/../../launch_clarify.json", 5, 3)
        }
 }
 
 func (p *program) Stop(s service.Service) error {
-	// Stop should not block. Return with a few seconds.
 	logger.Info("Stopping service...")
-	host := hostRetryIndefinitely(hostname())
-	if(!host.Drain) {
-	    logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
-	    client.Drain(&client.NomadServer{address, port}, host.ID, true)
-	    logger.Info("Sent request for node drain enable=true")
+	host := host(hostname())
+	if !host.Drain {
+                logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
+		http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, true, 5, 3)
+		logger.Info("Sent request for node drain enable=true")
 	} else {
-	    logger.Warning("Unexpectedly detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
+            logger.Warning("Unexpectedly detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
 	}
 	return nil
 }
@@ -114,53 +94,8 @@ func jobRunning() bool {
        return false
 }
 
-func submitJobRetryIndefinitely(nomad *client.NomadServer, launchFilePath string) {
-    executeHTTPRequestRetryIndefinitely(SubmitJob{nomad, launchFilePath, "submitting job"})
-}
-
-func drainRetryIndefinitely(nomad *client.NomadServer, id string, enable bool) {
-    executeHTTPRequestRetryIndefinitely(Drain{nomad, id, enable, "draining"})
-}
-
-func (drain Drain) request() (string, error) {
-    status, err := client.Drain(drain.nomad, drain.id, drain.enable)
-    return status, err
-}
-
-func (drain Drain) toVerb() string {
-    return drain.verb
-}
-
-func (submitJob SubmitJob) toVerb() string {
-    return submitJob.verb
-}
-
-func (submitJob SubmitJob) request() (string, error) {
-    return client.SubmitJob(submitJob.nomad, submitJob.launchFilePath)
-}
-
-func executeHTTPRequestRetryIndefinitely(request http) {
-   for status, err := request.request(); status != http_200_ok_status || err != nil; {
-        logger.Error("Error " + request.toVerb() + " got http status: " + status + " with error: ", err)
-        time.Sleep(3000 * time.Millisecond)
-    } 
-}
-
-func checkEmptyHost(host *client.Host) bool {
-    return host.ID == "" && host.Name == ""
-}
-
-func hostRetryIndefinitely(hostname string) *client.Host {
-    var foundHost *client.Host
-    for foundHost = host(hostname);checkEmptyHost(foundHost); {
-        logger.Error("Error trying to get host retrying.")
-        time.Sleep(3000 * time.Millisecond)
-    }
-    return foundHost
-}
-
 func host(hostname string) *client.Host {
-   hosts := client.Hosts(&client.NomadServer{address, port})
+   hosts := http.HostWithRetry(logger, &client.NomadServer{address, port}, 5, 3)
    for _, host := range hosts {
            if(hostname == host.Name) {
            	return &host
