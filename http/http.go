@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const http_200_ok_status string = "200 OK"
+const http_ok_status string = "200 OK"
 
 type post interface {
 	request() (string, error)
@@ -14,7 +14,7 @@ type post interface {
 }
 
 type get interface {
-	request(target *interface{}) error
+	request(target *interface{}) (string, error)
 	structType() string
 }
 
@@ -35,10 +35,11 @@ type Host struct {
 	nomad *client.NomadServer
 }
 
-func (host Host) request(target *interface{}) error {
+func (host Host) request(target *interface{}) (string, error) {
 	var err error
-	*target, err = client.Hosts(host.nomad)
-	return err
+	var status string
+	*target, status, err = client.Hosts(host.nomad)
+	return status, err
 }
 
 func (host Host) structType() string {
@@ -65,7 +66,7 @@ func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, 
 	numRetries := 1
 	for numRetries < retries {
 		status, err := request.request()
-		retry := status != http_200_ok_status || err != nil
+		retry := status != http_ok_status || err != nil
 		if !retry {
 			logger.Info(status)
 			return
@@ -81,10 +82,10 @@ func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, 
 func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request get, retries int, sleepSeconds time.Duration) {
 	numRetries := 1
 	for numRetries < retries {
-		err := request.request(target)
-		retry := err != nil
+		status, err := request.request(target)
+		retry := status != http_ok_status || err != nil
 		if !retry {
-			logger.Info(http_200_ok_status)
+			logger.Info(status)
 			return
 		}
 		numRetries++
