@@ -85,7 +85,7 @@ func hostname() string {
 }
 
 func jobRunning() bool {
-	jobs := http.JobsWithRetry(logger, &client.NomadServer{address, port}, 3, 3) //client.Jobs(&client.NomadServer{address, port})
+	jobs := http.JobsWithRetry(logger, &client.NomadServer{address, port}, 3, 3)
 	for _, nomadJob := range jobs {
 		if job == nomadJob.Name {
 			return true

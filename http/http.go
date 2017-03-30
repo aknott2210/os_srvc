@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-const http_ok_status string = "200 OK"
+const http_get_ok_status string = "200"
+const http_post_ok_status string = "200 OK"
 
 type post interface {
 	request() (string, error)
@@ -77,12 +78,17 @@ func (submitJob SubmitJob) toVerb() string {
 	return submitJob.verb
 }
 
+func logAndPanic(logger service.Logger, msg string) {
+	logger.Error(msg)
+	panic(msg)
+}
+
 func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, sleepSeconds time.Duration) {
-	numRetries := 1
+	numRetries := 0
 	for numRetries < retries {
 		status, err := request.request()
-		if status == http_ok_status && err == nil {
-			logger.Info("Successful http put for: " + request.toVerb() + " with status: " + status)
+		if status == http_post_ok_status && err == nil {
+			logger.Info("Successful http post for: " + request.toVerb() + " with status: " + status)
 			return
 		}
 		numRetries++
@@ -90,14 +96,15 @@ func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, 
 		logger.Error("Error "+request.toVerb()+" got http status: "+status+" with error: ", err)
 		logger.Error("Retrying...")
 	}
-	panic("Exceeded max number of retries for " + request.toVerb())
+
+	logAndPanic(logger, "Exceeded max number of retries for "+request.toVerb())
 }
 
 func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request get, retries int, sleepSeconds time.Duration) {
-	numRetries := 1
+	numRetries := 0
 	for numRetries < retries {
 		status, err := request.request(target)
-		if status == http_ok_status && err == nil {
+		if status == http_get_ok_status && err == nil {
 			logger.Info("Successful http get for: " + request.structType() + " with status: " + status)
 			return
 		}
@@ -106,7 +113,7 @@ func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request
 		logger.Error("Error requesting: "+request.structType()+" with error: ", err)
 		logger.Error("Retrying...")
 	}
-	panic("Exceeded max number of retries for get: " + request.structType())
+	logAndPanic(logger, "Exceeded max number of retries for get: "+request.structType())
 }
 
 func HostsWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Host {
@@ -117,7 +124,7 @@ func HostsWithRetry(logger service.Logger, nomad *client.NomadServer, retries in
 
 func JobsWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Job {
 	var jobs interface{}
-	executeHTTPGetWithRetry(logger, &jobs, Hosts{nomad}, retries, sleepSeconds)
+	executeHTTPGetWithRetry(logger, &jobs, Jobs{nomad}, retries, sleepSeconds)
 	return jobs.([]client.Job)
 }
 
