@@ -54,7 +54,7 @@ func (p *program) run() {
 		host := host(hostname())
 		if host.Drain {
 			logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
-			http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, false, 5, 3)
+			http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, false, 3, 3)
 			logger.Info("Sent request for node drain enable=false")
 		}
 	} else {
@@ -68,7 +68,7 @@ func (p *program) Stop(s service.Service) error {
 	host := host(hostname())
 	if !host.Drain {
 		logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=false")
-		http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, true, 5, 3)
+		http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, true, 3, 3)
 		logger.Info("Sent request for node drain enable=true")
 	} else {
 		logger.Warning("Unexpectedly detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
@@ -85,7 +85,7 @@ func hostname() string {
 }
 
 func jobRunning() bool {
-	jobs := client.Jobs(&client.NomadServer{address, port})
+	jobs := http.JobsWithRetry(logger, &client.NomadServer{address, port}, 3, 3) //client.Jobs(&client.NomadServer{address, port})
 	for _, nomadJob := range jobs {
 		if job == nomadJob.Name {
 			return true
@@ -95,7 +95,7 @@ func jobRunning() bool {
 }
 
 func host(hostname string) *client.Host {
-	hosts := http.HostWithRetry(logger, &client.NomadServer{address, port}, 5, 3)
+	hosts := http.HostsWithRetry(logger, &client.NomadServer{address, port}, 3, 3)
 	for _, host := range hosts {
 		if hostname == host.Name {
 			return &host

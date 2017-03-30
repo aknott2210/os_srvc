@@ -31,19 +31,34 @@ type SubmitJob struct {
 	verb           string
 }
 
-type Host struct {
+type Hosts struct {
 	nomad *client.NomadServer
 }
 
-func (host Host) request(target *interface{}) (string, error) {
+type Jobs struct {
+	nomad *client.NomadServer
+}
+
+func (hosts Hosts) request(target *interface{}) (string, error) {
 	var err error
 	var status string
-	*target, status, err = client.Hosts(host.nomad)
+	*target, status, err = client.Hosts(hosts.nomad)
 	return status, err
 }
 
-func (host Host) structType() string {
-	return "Host"
+func (jobs Jobs) request(target *interface{}) (string, error) {
+	var err error
+	var status string
+	*target, status, err = client.Jobs(jobs.nomad)
+	return status, err
+}
+
+func (hosts Hosts) structType() string {
+	return "Hosts"
+}
+
+func (jobs Jobs) structType() string {
+	return "Jobs"
 }
 
 func (drain Drain) request() (string, error) {
@@ -66,9 +81,8 @@ func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, 
 	numRetries := 1
 	for numRetries < retries {
 		status, err := request.request()
-		retry := status != http_ok_status || err != nil
-		if !retry {
-			logger.Info(status)
+		if status == http_ok_status && err == nil {
+			logger.Info("Successful http put for: " + request.toVerb() + " with status: " + status)
 			return
 		}
 		numRetries++
@@ -83,9 +97,8 @@ func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request
 	numRetries := 1
 	for numRetries < retries {
 		status, err := request.request(target)
-		retry := status != http_ok_status || err != nil
-		if !retry {
-			logger.Info(status)
+		if status == http_ok_status && err == nil {
+			logger.Info("Successful http get for: " + request.structType() + " with status: " + status)
 			return
 		}
 		numRetries++
@@ -96,10 +109,16 @@ func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request
 	panic("Exceeded max number of retries for get: " + request.structType())
 }
 
-func HostWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Host {
+func HostsWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Host {
 	var hosts interface{}
-	executeHTTPGetWithRetry(logger, &hosts, Host{nomad}, 3, 5)
+	executeHTTPGetWithRetry(logger, &hosts, Hosts{nomad}, retries, sleepSeconds)
 	return hosts.([]client.Host)
+}
+
+func JobsWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Job {
+	var jobs interface{}
+	executeHTTPGetWithRetry(logger, &jobs, Hosts{nomad}, retries, sleepSeconds)
+	return jobs.([]client.Job)
 }
 
 func SubmitJobWithRetry(logger service.Logger, nomad *client.NomadServer, launchFilePath string, retries int, sleepSeconds time.Duration) {
