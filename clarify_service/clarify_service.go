@@ -59,7 +59,7 @@ func (p *program) run() {
 		}
 	} else {
 		logger.Info("Detected no running jobs, submitting " + job)
-		http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, exeDir()+"/../../launch_clarify.json", 5, 3)
+		http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, exeDir()+"/../../launch_clarify.json", 3, 3)
 	}
 }
 
