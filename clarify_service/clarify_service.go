@@ -20,6 +20,7 @@ var logger service.Logger
 var address string
 var port int
 var job string
+var clarify string
 
 type program struct{}
 
@@ -27,6 +28,7 @@ func init() {
 	flag.StringVar(&job, "job", "clarify", "The name of the job to run.")
 	flag.StringVar(&address, "address", "localhost", "The http address of Nomad.")
 	flag.IntVar(&port, "port", 4646, "The port that Nomad is running on.")
+	flag.StringVar(&clarify, "clarify", "", "The Clarify server location.")
 }
 
 func init() {
@@ -38,6 +40,7 @@ func init() {
 			logger.Error(err)
 		}
 		job = os.Args[3]
+		clarify = os.Args[4]
 	}
 }
 
@@ -59,7 +62,7 @@ func (p *program) run() {
 		}
 	} else {
 		logger.Info("Detected no running jobs, submitting " + job)
-		http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, exeDir()+"/../../launch_clarify.json", 3, 3)
+		http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, clarify+"launch_clarify.json", 3, 3)
 	}
 }
 
@@ -119,7 +122,7 @@ func main() {
 		Name:        "clarify",
 		DisplayName: "clarify",
 		Description: "This service starts Clarify by making REST calls to Nomad.",
-		Arguments:   []string{address, strconv.Itoa(port), job},
+		Arguments:   []string{address, strconv.Itoa(port), job, clarify},
 	}
 
 	prg := &program{}
