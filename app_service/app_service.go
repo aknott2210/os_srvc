@@ -18,6 +18,7 @@ var app string
 var config string
 var configFlag string
 var serviceName string
+var dependency string
 
 type program struct{}
 
@@ -26,6 +27,7 @@ func init() {
 	flag.StringVar(&serviceName, "serviceName", "", "The name of the service.")
 	flag.StringVar(&config, "config", "", "The path to the configuration.")
 	flag.StringVar(&configFlag, "configFlag", "", "The configuration flag to provide to the application.")
+	flag.StringVar(&dependency, "dependency", "", "Dependency to add to service start up.")
 }
 
 func init() {
@@ -34,6 +36,7 @@ func init() {
 		config = os.Args[2]
 		configFlag = os.Args[3]
 		serviceName = os.Args[4]
+		dependency = os.Args[5]
 	}
 }
 
@@ -56,15 +59,37 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+func serviceConfig() *service.Config {
+        if dependency == "" {
+            return configNoDependency()
+        } else {
+            return configWithDependency()
+        }
+}
+
+func configWithDependency() *service.Config {
+        return &service.Config{
+		Name:         serviceName,
+		DisplayName:  serviceName,
+		Description:  "This service starts up " + serviceName,
+		Arguments:    []string{app, config, configFlag, serviceName},
+		Dependencies: []string{dependency},
+	}
+}
+
+func configNoDependency() *service.Config {
+        return &service.Config{
+		Name:         serviceName,
+		DisplayName:  serviceName,
+		Description:  "This service starts up " + serviceName,
+		Arguments:    []string{app, config, configFlag, serviceName},
+	}
+}
+
 func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
-	svcConfig := &service.Config{
-		Name:        serviceName,
-		DisplayName: serviceName,
-		Description: "This service starts up " + serviceName,
-		Arguments:   []string{app, config, configFlag, serviceName},
-	}
+	svcConfig := serviceConfig()
 
 	prg := &program{}
 	s, err := service.New(prg, svcConfig)

@@ -12,7 +12,6 @@ import (
 	"github.com/pgombola/gomad/client"
 	"log"
 	"os"
-	"path"
 	"strconv"
 )
 
@@ -21,6 +20,8 @@ var address string
 var port int
 var job string
 var clarify string
+var consul string
+var nomad string
 
 type program struct{}
 
@@ -29,8 +30,9 @@ func init() {
 	flag.StringVar(&address, "address", "localhost", "The http address of Nomad.")
 	flag.IntVar(&port, "port", 4646, "The port that Nomad is running on.")
 	flag.StringVar(&clarify, "clarify", "", "The Clarify server location.")
+	flag.StringVar(&consul, "consul", "", "The Consul service name.")
+	flag.StringVar(&nomad, "nomad", "", "The Nomad service name.")
 }
-
 func init() {
 	if !arguments.ServiceCall() {
 		address = os.Args[1]
@@ -41,6 +43,8 @@ func init() {
 		}
 		job = os.Args[3]
 		clarify = os.Args[4]
+		consul = os.Args[5]
+		nomad = os.Args[6]
 	}
 }
 
@@ -107,14 +111,6 @@ func host(hostname string) *client.Host {
 	return &client.Host{}
 }
 
-func exeDir() string {
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	return path.Dir(ex)
-}
-
 func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
@@ -122,7 +118,8 @@ func main() {
 		Name:        "clarify",
 		DisplayName: "clarify",
 		Description: "This service starts Clarify by making REST calls to Nomad.",
-		Arguments:   []string{address, strconv.Itoa(port), job, clarify},
+		Arguments:   []string{address, strconv.Itoa(port), job, clarify, consul, nomad},
+		Dependencies: []string{consul, nomad},
 	}
 
 	prg := &program{}
