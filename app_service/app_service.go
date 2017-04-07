@@ -36,7 +36,9 @@ func init() {
 		config = os.Args[2]
 		configFlag = os.Args[3]
 		serviceName = os.Args[4]
-		dependency = os.Args[5]
+		if len(os.Args) >= 6 {
+		        dependency = os.Args[5]
+		}
 	}
 }
 
