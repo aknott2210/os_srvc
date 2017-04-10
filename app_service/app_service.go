@@ -37,7 +37,7 @@ func init() {
 		configFlag = os.Args[3]
 		serviceName = os.Args[4]
 		if len(os.Args) >= 6 {
-		        dependency = os.Args[5]
+			dependency = os.Args[5]
 		}
 	}
 }
@@ -62,15 +62,15 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func serviceConfig() *service.Config {
-        if dependency == "" {
-            return configNoDependency()
-        } else {
-            return configWithDependency()
-        }
+	if dependency == "" {
+		return configNoDependency()
+	} else {
+		return configWithDependency()
+	}
 }
 
 func configWithDependency() *service.Config {
-        return &service.Config{
+	return &service.Config{
 		Name:         serviceName,
 		DisplayName:  serviceName,
 		Description:  "This service starts up " + serviceName,
@@ -80,11 +80,11 @@ func configWithDependency() *service.Config {
 }
 
 func configNoDependency() *service.Config {
-        return &service.Config{
-		Name:         serviceName,
-		DisplayName:  serviceName,
-		Description:  "This service starts up " + serviceName,
-		Arguments:    []string{app, config, configFlag, serviceName},
+	return &service.Config{
+		Name:        serviceName,
+		DisplayName: serviceName,
+		Description: serviceName + " service",
+		Arguments:   []string{app, config, configFlag, serviceName},
 	}
 }
 
