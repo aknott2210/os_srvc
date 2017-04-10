@@ -33,6 +33,7 @@ func init() {
 	flag.StringVar(&consul, "consul", "", "The Consul service name.")
 	flag.StringVar(&nomad, "nomad", "", "The Nomad service name.")
 }
+
 func init() {
 	if !arguments.ServiceCall() {
 		address = os.Args[1]
@@ -115,10 +116,10 @@ func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
 	svcConfig := &service.Config{
-		Name:        "clarify",
-		DisplayName: "clarify",
-		Description: "This service starts Clarify by making REST calls to Nomad.",
-		Arguments:   []string{address, strconv.Itoa(port), job, clarify, consul, nomad},
+		Name:         "clarify",
+		DisplayName:  "clarify",
+		Description:  "Clarify service",
+		Arguments:    []string{address, strconv.Itoa(port), job, clarify, consul, nomad},
 		Dependencies: []string{consul, nomad},
 	}
 
