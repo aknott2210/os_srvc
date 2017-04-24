@@ -11,6 +11,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
+	"strconv"
 )
 
 var logger service.Logger
@@ -19,6 +21,7 @@ var config string
 var configFlag string
 var serviceName string
 var dependency string
+var pid int
 
 type program struct{}
 
@@ -52,13 +55,25 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
 	cmd := exec.Command(app, "agent", configFlag, config)
 	err := cmd.Start()
+	pid = cmd.Process.Pid
 	if err != nil {
 		logger.Error(err)
 	}
 }
 
 func (p *program) Stop(s service.Service) error {
+	if win() {
+		cmd := exec.Command("Taskkill", "/IM", strconv.Itoa(pid), "/F")
+		err := cmd.Start()
+		if err != nil {
+			logger.Error(err)
+		}
+	}
 	return nil
+}
+
+func win() bool {
+	return runtime.GOOS == "windows"
 }
 
 func serviceConfig() *service.Config {
