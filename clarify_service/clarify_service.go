@@ -57,15 +57,17 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
+        host := host(hostname())
 	if jobRunning() {
 		logger.Info("Detected job as running...")
-		host := host(hostname())
 		if host.Drain {
 			logger.Info("Detected node: " + host.Name + " with host/node id: " + host.ID + " as having drain enable=true")
 			http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, false, 3, 3)
 			logger.Info("Sent request for node drain enable=false")
 		}
 	} else {
+	        logger.Info("Disabling drain for host/node: " + host.Name + " with host/node id: " + host.ID)
+		http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, false, 3, 3)
 		logger.Info("Detected no running jobs, submitting " + job)
 		http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, clarify+"launch_clarify.json", 3, 3)
 	}
