@@ -1,21 +1,20 @@
 package http
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/kardianos/service"
 	"github.com/pgombola/gomad/client"
-	"time"
 )
 
-const http_get_ok_status string = "200"
-const http_post_ok_status string = "200 OK"
-
 type post interface {
-	request() (string, error)
+	request() (int, error)
 	toVerb() string
 }
 
 type get interface {
-	request(target *interface{}) (string, error)
+	request(target *interface{}) (int, error)
 	structType() string
 }
 
@@ -40,17 +39,13 @@ type Jobs struct {
 	nomad *client.NomadServer
 }
 
-func (hosts Hosts) request(target *interface{}) (string, error) {
-	var err error
-	var status string
-	*target, status, err = client.Hosts(hosts.nomad)
+func (hosts Hosts) request(target *interface{}) (int, error) {
+	_, status, err := client.Hosts(hosts.nomad)
 	return status, err
 }
 
-func (jobs Jobs) request(target *interface{}) (string, error) {
-	var err error
-	var status string
-	*target, status, err = client.Jobs(jobs.nomad)
+func (jobs Jobs) request(target *interface{}) (int, error) {
+	_, status, err := client.Jobs(jobs.nomad)
 	return status, err
 }
 
@@ -62,11 +57,11 @@ func (jobs Jobs) structType() string {
 	return "Jobs"
 }
 
-func (drain Drain) request() (string, error) {
+func (drain Drain) request() (int, error) {
 	return client.Drain(drain.nomad, drain.id, drain.enable)
 }
 
-func (submitJob SubmitJob) request() (string, error) {
+func (submitJob SubmitJob) request() (int, error) {
 	return client.SubmitJob(submitJob.nomad, submitJob.launchFilePath)
 }
 
@@ -87,13 +82,13 @@ func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, 
 	numRetries := 0
 	for numRetries < retries {
 		status, err := request.request()
-		if status == http_post_ok_status && err == nil {
-			logger.Info("Successful http post for: " + request.toVerb() + " with status: " + status)
+		if status == http.StatusOK && err == nil {
+			logger.Infof("Successful http post for: %s with status: %v", request.toVerb(), status)
 			return
 		}
 		numRetries++
 		time.Sleep((sleepSeconds * 1000) * time.Millisecond)
-		logger.Error("Error "+request.toVerb()+" got http status: "+status+" with error: ", err)
+		logger.Errorf("Error %s returned %v HTTP status with error: %v", request.toVerb(), status, err)
 		logger.Error("Retrying...")
 	}
 
@@ -104,8 +99,8 @@ func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request
 	numRetries := 0
 	for numRetries < retries {
 		status, err := request.request(target)
-		if status == http_get_ok_status && err == nil {
-			logger.Info("Successful http get for: " + request.structType() + " with status: " + status)
+		if status == http.StatusOK && err == nil {
+			logger.Infof("Successful HTTP get for: %s with status: %v", request.structType(), status)
 			return
 		}
 		numRetries++

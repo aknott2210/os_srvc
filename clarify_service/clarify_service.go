@@ -6,13 +6,14 @@ package main
 
 import (
 	"flag"
-	"github.com/aknott2210/os_service/arguments"
-	"github.com/aknott2210/os_service/http"
-	"github.com/kardianos/service"
-	"github.com/pgombola/gomad/client"
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/aknott2210/os_srvc/arguments"
+	"github.com/aknott2210/os_srvc/http"
+	"github.com/kardianos/service"
+	"github.com/pgombola/gomad/client"
 )
 
 var logger service.Logger
@@ -57,7 +58,7 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
-        host := host(hostname())
+	host := host(hostname())
 	if jobRunning() {
 		logger.Info("Detected job as running...")
 		if host.Drain {
@@ -66,7 +67,7 @@ func (p *program) run() {
 			logger.Info("Sent request for node drain enable=false")
 		}
 	} else {
-	        logger.Info("Disabling drain for host/node: " + host.Name + " with host/node id: " + host.ID)
+		logger.Info("Disabling drain for host/node: " + host.Name + " with host/node id: " + host.ID)
 		http.DrainWithRetry(logger, &client.NomadServer{address, port}, host.ID, false, 3, 3)
 		logger.Info("Detected no running jobs, submitting " + job)
 		http.SubmitJobWithRetry(logger, &client.NomadServer{address, port}, clarify+"launch_clarify.json", 3, 3)
