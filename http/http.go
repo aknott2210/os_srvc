@@ -14,62 +14,60 @@ type post interface {
 }
 
 type get interface {
-	request(target *interface{}) (int, error)
+	request() (interface{}, int, error)
 	structType() string
 }
 
-type Drain struct {
+type drain struct {
 	nomad  *client.NomadServer
 	id     string
 	enable bool
 	verb   string
 }
 
-type SubmitJob struct {
+type submitJob struct {
 	nomad          *client.NomadServer
 	launchFilePath string
 	verb           string
 }
 
-type Hosts struct {
+type hosts struct {
 	nomad *client.NomadServer
 }
 
-type Jobs struct {
+type jobs struct {
 	nomad *client.NomadServer
 }
 
-func (hosts Hosts) request(target *interface{}) (int, error) {
-	_, status, err := client.Hosts(hosts.nomad)
-	return status, err
+func (hosts hosts) request() (interface{}, int, error) {
+	return client.Hosts(hosts.nomad)
 }
 
-func (jobs Jobs) request(target *interface{}) (int, error) {
-	_, status, err := client.Jobs(jobs.nomad)
-	return status, err
+func (jobs jobs) request() (interface{}, int, error) {
+	return client.Jobs(jobs.nomad)
 }
 
-func (hosts Hosts) structType() string {
+func (hosts hosts) structType() string {
 	return "Hosts"
 }
 
-func (jobs Jobs) structType() string {
+func (jobs jobs) structType() string {
 	return "Jobs"
 }
 
-func (drain Drain) request() (int, error) {
+func (drain drain) request() (int, error) {
 	return client.Drain(drain.nomad, drain.id, drain.enable)
 }
 
-func (submitJob SubmitJob) request() (int, error) {
+func (submitJob submitJob) request() (int, error) {
 	return client.SubmitJob(submitJob.nomad, submitJob.launchFilePath)
 }
 
-func (drain Drain) toVerb() string {
+func (drain drain) toVerb() string {
 	return drain.verb
 }
 
-func (submitJob SubmitJob) toVerb() string {
+func (submitJob submitJob) toVerb() string {
 	return submitJob.verb
 }
 
@@ -95,13 +93,13 @@ func executeHTTPPostWithRetry(logger service.Logger, request post, retries int, 
 	logAndPanic(logger, "Exceeded max number of retries for "+request.toVerb())
 }
 
-func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request get, retries int, sleepSeconds time.Duration) {
+func executeHTTPGetWithRetry(logger service.Logger, request get, retries int, sleepSeconds time.Duration) interface{} {
 	numRetries := 0
 	for numRetries < retries {
-		status, err := request.request(target)
+		target, status, err := request.request()
 		if status == http.StatusOK && err == nil {
 			logger.Infof("Successful HTTP get for: %s with status: %v", request.structType(), status)
-			return
+			return target
 		}
 		numRetries++
 		time.Sleep((sleepSeconds * 1000) * time.Millisecond)
@@ -109,24 +107,23 @@ func executeHTTPGetWithRetry(logger service.Logger, target *interface{}, request
 		logger.Error("Retrying...")
 	}
 	logAndPanic(logger, "Exceeded max number of retries for get: "+request.structType())
+	return nil
 }
 
 func HostsWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Host {
-	var hosts interface{}
-	executeHTTPGetWithRetry(logger, &hosts, Hosts{nomad}, retries, sleepSeconds)
+	hosts := executeHTTPGetWithRetry(logger, hosts{nomad}, retries, sleepSeconds)
 	return hosts.([]client.Host)
 }
 
 func JobsWithRetry(logger service.Logger, nomad *client.NomadServer, retries int, sleepSeconds time.Duration) []client.Job {
-	var jobs interface{}
-	executeHTTPGetWithRetry(logger, &jobs, Jobs{nomad}, retries, sleepSeconds)
+	jobs := executeHTTPGetWithRetry(logger, jobs{nomad}, retries, sleepSeconds)
 	return jobs.([]client.Job)
 }
 
 func SubmitJobWithRetry(logger service.Logger, nomad *client.NomadServer, launchFilePath string, retries int, sleepSeconds time.Duration) {
-	executeHTTPPostWithRetry(logger, SubmitJob{nomad, launchFilePath, "submitting job"}, retries, sleepSeconds)
+	executeHTTPPostWithRetry(logger, submitJob{nomad, launchFilePath, "submitting job"}, retries, sleepSeconds)
 }
 
 func DrainWithRetry(logger service.Logger, nomad *client.NomadServer, id string, enable bool, retries int, sleepSeconds time.Duration) {
-	executeHTTPPostWithRetry(logger, Drain{nomad, id, enable, "draining"}, retries, sleepSeconds)
+	executeHTTPPostWithRetry(logger, drain{nomad, id, enable, "draining"}, retries, sleepSeconds)
 }
