@@ -6,13 +6,14 @@ package main
 
 import (
 	"flag"
-	"github.com/aknott2210/os_service/arguments"
-	"github.com/kardianos/service"
 	"log"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
+
+	"github.com/aknott2210/os_srvc/arguments"
+	"github.com/kardianos/service"
 )
 
 var logger service.Logger
