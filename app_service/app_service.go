@@ -20,7 +20,6 @@ var configFlag string
 var serviceName string
 var dependency string
 var pid int
-var user string
 
 type program struct{}
 
@@ -29,7 +28,6 @@ func init() {
 	flag.StringVar(&serviceName, "serviceName", "", "The name of the service.")
 	flag.StringVar(&config, "config", "", "The path to the configuration.")
 	flag.StringVar(&configFlag, "configFlag", "", "The configuration flag to provide to the application.")
-	flag.StringVar(&user, "user", "", "The current user.")
 	flag.StringVar(&dependency, "dependency", "", "Dependency to add to service start up.")
 }
 
@@ -39,9 +37,8 @@ func init() {
 		config = os.Args[2]
 		configFlag = os.Args[3]
 		serviceName = os.Args[4]
-		user = os.Args[5]
-		if len(os.Args) >= 7 {
-			dependency = os.Args[6]
+		if len(os.Args) >= 6 {
+			dependency = os.Args[5]
 		}
 	}
 }
@@ -69,7 +66,6 @@ func configWithDependency() *service.Config {
 		Description:  "This service starts up " + serviceName,
 		Arguments:    []string{"agent", configFlag, config},
 		Dependencies: []string{dependency},
-		UserName: user,
 		Executable: app,
 	}
 }
@@ -80,7 +76,6 @@ func configNoDependency() *service.Config {
 		DisplayName: serviceName,
 		Description: serviceName + " service",
 		Arguments:    []string{"agent", configFlag, config},
-		UserName: user,
 		Executable: app,
 	}
 }
