@@ -8,9 +8,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"os/exec"
-	"runtime"
-	"strconv"
 
 	"github.com/aknott2210/os_srvc/arguments"
 	"github.com/kardianos/service"
@@ -23,6 +20,7 @@ var configFlag string
 var serviceName string
 var dependency string
 var pid int
+var user string
 
 type program struct{}
 
@@ -31,6 +29,7 @@ func init() {
 	flag.StringVar(&serviceName, "serviceName", "", "The name of the service.")
 	flag.StringVar(&config, "config", "", "The path to the configuration.")
 	flag.StringVar(&configFlag, "configFlag", "", "The configuration flag to provide to the application.")
+	flag.StringVar(&user, "user", "", "The current user.")
 	flag.StringVar(&dependency, "dependency", "", "Dependency to add to service start up.")
 }
 
@@ -40,41 +39,19 @@ func init() {
 		config = os.Args[2]
 		configFlag = os.Args[3]
 		serviceName = os.Args[4]
-		if len(os.Args) >= 6 {
-			dependency = os.Args[5]
+		user = os.Args[5]
+		if len(os.Args) >= 7 {
+			dependency = os.Args[6]
 		}
 	}
 }
 
 func (p *program) Start(s service.Service) error {
-	// Start should not block. Do the actual work async.
-	logger.Info("Starting service...")
-	go p.run()
 	return nil
-}
-
-func (p *program) run() {
-	cmd := exec.Command(app, "agent", configFlag, config)
-	err := cmd.Start()
-	pid = cmd.Process.Pid
-	if err != nil {
-		logger.Error(err)
-	}
 }
 
 func (p *program) Stop(s service.Service) error {
-	if win() {
-		cmd := exec.Command("Taskkill", "/IM", strconv.Itoa(pid), "/F")
-		err := cmd.Start()
-		if err != nil {
-			logger.Error(err)
-		}
-	}
 	return nil
-}
-
-func win() bool {
-	return runtime.GOOS == "windows"
 }
 
 func serviceConfig() *service.Config {
@@ -90,8 +67,10 @@ func configWithDependency() *service.Config {
 		Name:         serviceName,
 		DisplayName:  serviceName,
 		Description:  "This service starts up " + serviceName,
-		Arguments:    []string{app, config, configFlag, serviceName},
+		Arguments:    []string{"agent", configFlag, config},
 		Dependencies: []string{dependency},
+		UserName: user,
+		Executable: app,
 	}
 }
 
@@ -100,7 +79,9 @@ func configNoDependency() *service.Config {
 		Name:        serviceName,
 		DisplayName: serviceName,
 		Description: serviceName + " service",
-		Arguments:   []string{app, config, configFlag, serviceName},
+		Arguments:    []string{"agent", configFlag, config},
+		UserName: user,
+		Executable: app,
 	}
 }
 
